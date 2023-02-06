@@ -32,21 +32,22 @@ words_to_process = [
 # Handlers
 async def start(message: types.Message):
     global working_zone
-    start_shift_text = f"#смена {date.today().strftime('%d/%m/%Y')}\nначал\n• Зона работы: {working_zone}\n"
+    start_shift_text = f"#смена {date.today().strftime('%d.%m.%Y')}\nначал\n• Зона работы: {working_zone}\n"
     # todo: написать еще одно сообшение-напоминание о том, чтобы скопировал сообщение и отправил в чат скаутов
     # todo: сделать так чтобы оно автоматически копировалось в буфер (если так можно)
-    await message.reply(start_shift_text)
+    await message.answer(start_shift_text)
 
 
 async def process_scooters(message: types.Message):
+    global count_scooters, count_parking
     pieces = message.text.split()
-    if pieces[0].lower() in words_to_process:
-        if pieces[1].isdigit():
-            count_parking = + 1
-            count_scooters = + int(pieces[1])
-            msg = f'✅🛴 {pieces[1]} ТС Обработано.\n✅🅿️  Парковка обработана.'
-            # todo: добавить инлайн кновку отменить (когда будешь делать через бд, записывай с вызовом метода уникальный message_id или другой id, чтобы потом по нему удалять из бд определенное количество. Или для начала можно сделать просто: берем это же сообщение, в котором нажата инлайн кнопка отмены, парсим ее текст и делаем запрос в бд на вычитание тс, но тогда бл должна быть не из UNSIGNED TINYINT | INT32)
-            await message.from_user.bot.send_message()
+    if pieces[0].lower() in words_to_process and pieces[1].isdigit():
+
+        count_parking += 1
+        count_scooters += int(pieces[1])
+        msg = f'✅🛴 {pieces[1]} ТС Обработано.\n✅🅿️  Парковка обработана.'
+        # todo: добавить инлайн кновку отменить (когда будешь делать через бд, записывай с вызовом метода уникальный message_id или другой id, чтобы потом по нему удалять из бд определенное количество. Или для начала можно сделать просто: берем это же сообщение, в котором нажата инлайн кнопка отмены, парсим ее текст и делаем запрос в бд на вычитание тс, но тогда бл должна быть не из UNSIGNED TINYINT | INT32)
+        await message.answer(msg)
 
 async def instructions(message: types.Message):
     description = 'Описание:\n\tБот для счёта обработанных ТС и парковок.\n\r'
@@ -56,13 +57,13 @@ async def instructions(message: types.Message):
     how_to_write_ts = f'\tКак считать:\n\t\t+🛴🅿️ Напиши "тс <число>". Тогда тебе засчитается это количество тс и одна парковка.\n\t\t🛠Если у тебя самокат🛴 на 🛠ремонт, выбери в меню команду "сбор, ремонт". Тогда тебе засчитается только один тс, без парковки (так и надо)\n\r' #todo: добавить две инструкции: ераткую, где просто примеры с кратким описанием и расширенные, где написано какие слова допустимы и к кому обращаться для добавления новых слов, для багов и вцелом для исправления ошибок
     final_instr = description + how_to_shift + how_to_write_ts
     how_to_get_shift_stats = '' # todo: написать как смотреть статистику во время смены
-    await message.from_user.bot.send_message(final_instr)
+    await message.answer(text=final_instr)
 
 async def repair(message: types.Message):
     global count_scooters
     count_scooters += 1
     repair_text = f'✅🛠🛴 1 ТС Обработан.'
-    await message.from_user.bot.send_message(repair_text)
+    await message.answer(repair_text)
 
 
 async def stats():
@@ -71,12 +72,12 @@ async def stats():
 
 
 async def shift_stats(message: types.Message):
-    await message.from_user.bot.send_message(stats())
+    await message.answer(text=await stats())
 
 
 async def end_shift(message: types.Message):
-    end_shift_text = f"#смена {date.today.strftime('%d.%m.%Y')}\nзавершил\n• Зона работы: {working_zone}\n" + stats()
-    await message.from_user.bot.send_message(end_shift_text)
+    end_shift_text = f"#смена {date.today().strftime('%d.%m.%Y')}\nзавершил\n• Зона работы: {working_zone}\n" + await stats()
+    await message.answer(end_shift_text)
     global count_scooters, count_parking
     count_scooters = 0
     count_parking = 0
@@ -125,18 +126,17 @@ async def process_event(event, dp: Dispatcher):
 #     return {'statusCode': 405}
 
 if __name__ == '__main__':
-    bot = Bot("6119084002:AAFmE7fohuywnhJuSsdDAjqJ6c4_CJEnNmg")
+    bot = Bot("6057374188:AAER_-4JpcIp3w4IbcDUBrMnm0RCen2RKKI")
     dp = Dispatcher(bot)
 
     dp.register_message_handler(start, commands=['start'])
-    dp.register_message_handler(process_scooters)
     dp.register_message_handler(instructions, commands=['help'])
     dp.register_message_handler(repair, commands='repair')
     dp.register_message_handler(shift_stats, commands=['stats'])
     dp.register_message_handler(end_shift, commands=['end_shift'])
+    dp.register_message_handler(process_scooters)
 
     log.debug('Handlers are registered.')
 
-    # bot.delete_webhook()
     executor.start_polling(dp)
 
